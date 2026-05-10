@@ -2330,7 +2330,13 @@ Query all active skills: SELECT * FROM mcp_registry WHERE active = true;'),
 - training plan ("Trainingsplan", "Plan erstellen")
 - summary ("Wie liege ich", "Tagesbilanz", "Wochenbilanz")
 
-→ YOU MUST IMMEDIATELY call mcp_client. DO NOT improvise responses or list 12 onboarding questions yourself.
+→ YOU MUST IMMEDIATELY call mcp_client → fitness-buddy. DO NOT improvise responses or list 12 onboarding questions yourself.
+
+CRITICAL — NEVER ROUTE FITNESS TOPICS TO OTHER TOOLS:
+- NEVER use expert_agent (research-expert, content-creator, etc.) for any fitness/nutrition/workout/training-plan/profile/body/hydration topic. Even if the user asks for "research" or a "detailed plan" — fitness-buddy is the ONLY authorized handler.
+- NEVER use Web Search, Web Reader, or HTTP request tools to assemble fitness content from external sources. The skill already integrates wger.de exercises and OpenFoodFacts internally.
+- If the mcp_client call to fitness-buddy fails or returns an error message (e.g. "Plan generation failed", "Request failed with status code 400", "OpenAI API error", validation rejection), you MUST pass the actual error to the user verbatim and suggest a retry. NEVER make up a workout plan, meal estimate, calorie count, exercise list, or any other fitness data — and NEVER fall back to the research-expert as a workaround.
+- The fitness-buddy skill is the only source of truth for fitness data. If it fails, the data does not exist. Reporting fabricated or research-expert-generated data as if it came from Buddy is a critical bug.
 
 mcp_url: "{mcp_url}/mcp/fitness-buddy"
 
@@ -2350,7 +2356,7 @@ water → tool_name="log_hydration". sub_action="log"|"today"|"set_target", "" f
 
 summary → tool_name="summary", arguments={{"action":"summary","sub_action":"today|week|month"}}.
 
-training plan → tool_name="training_plan". sub_action="generate_custom"|"today"|"get_active"|"list_templates"|"import_template"|"complete_session"|"adjust", "" for unused goal/weeks/days_per_week/equipment/template_id/session_id/plan_id/adjustment_note/notes.
+training plan → tool_name="training_plan". sub_action="generate_custom"|"today"|"get_active"|"complete_session"|"adjust", "" for unused goal/weeks/days_per_week/equipment/session_id/plan_id/adjustment_note/notes. (Note: list_templates/import_template paths are deprecated — wger public-templates require auth.)
 
 goals → tool_name="goals". sub_action="set"|"list"|"archive", "" for unused goal_type/target_value/target_unit/current_value/deadline/goal_id/status.
 
