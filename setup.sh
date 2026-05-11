@@ -1785,7 +1785,7 @@ if [ -n "$REMINDER_RUNNER_ID" ]; then
 fi
 
 # Activate sub-workflows (required since n8n 2.x)
-for SUB_WF in mcp-client mcp-builder mcp-library-manager agent-library-manager sub-agent-runner workflow-builder reminder-factory project-manager background-checker; do
+for SUB_WF in mcp-client mcp-builder mcp-library-manager agent-library-manager sub-agent-runner workflow-builder reminder-factory project-manager background-checker browser-use; do
   SUB_WF_ID=${WF_IDS[$SUB_WF]}
   if [ -n "$SUB_WF_ID" ]; then
     curl -s -X POST "${N8N_BASE}/api/v1/workflows/${SUB_WF_ID}/activate" \
