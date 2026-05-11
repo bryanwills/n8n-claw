@@ -202,6 +202,9 @@ Built-in capability for **agentic browser actions** (newsletter signups, form fi
 
 **Resource:** ~500 MB-1 GB RAM per concurrent session.
 
+**Interactive 2FA flow** (validated end-to-end on GitHub login):
+The agent doesn't have a TOTP generator built in, but it doesn't need one. When a login task hits a 2FA prompt, the keep-alive session pool keeps the 2FA page loaded between tool calls. The agent stops, asks the user for the code via Telegram, and on the user's reply makes a follow-up `browser_action` call with the **same** `domain` — the code lands on the form that's still open in the live Chromium tab, GitHub redirects to the dashboard, and subsequent tasks on that domain inherit the now-authenticated session. Works for any time-based code (TOTP, SMS, email magic-link); does NOT work for hardware-key 2FA (WebAuthn/passkeys).
+
 **dmo-claw portability:** Yes (MIT license). Port by copying `browser-bridge/`, `workflows/browser-use.json`, and the `Browser Action` toolWorkflow node into the dmo-claw repo.
 
 ### MCP Builder Pattern

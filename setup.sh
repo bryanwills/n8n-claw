@@ -2660,12 +2660,20 @@ PERSISTENT LOGIN PATTERN:
 SAFETY:
 - For sensitive actions (purchases, posts, irreversible changes, banking) ALWAYS confirm with the user via Telegram first.
 - Typical task takes 30–90 seconds. Tell the user ''moment, das dauert ein paar Sekunden'' so they know to wait.
-- If 2FA / MFA appears, do not try to solve it — tell the user and ask them to complete it manually next time they log in via their own browser.
 - If a CAPTCHA appears, return the screenshot URL (if available) and tell the user.
+
+INTERACTIVE 2FA / MFA PATTERN:
+When a 2FA prompt appears during a login task (TOTP, SMS-code, email-magic-link code):
+1. Stop and ask the user for the code in a focused message, e.g. ''GitHub fragt nach einem 6-stelligen 2FA-Code aus deiner Authenticator-App. Bitte schick mir den Code.''
+2. DO NOT navigate away, close the browser, or call close_session. The keep-alive session pool holds the live 2FA page open for the next call.
+3. When the user replies with the code, make a follow-up browser_action call with the SAME domain and a task like ''Enter the 2FA code 324617 in the current authentication form and submit it''.
+4. The follow-up reuses the same live browser session — the code lands on the form that''s already open, login completes, session is now fully authenticated for further tasks on that domain.
+This works for any time-based code (TOTP, SMS, email magic-link). It does NOT work for hardware-key 2FA (WebAuthn / passkeys) since those need a physical USB device the bridge does not have.
 
 EXAMPLES:
 - {{"action": "task", "task": "Sign up for the newsletter on https://example.com with email me@example.com"}}
-- {{"action": "task", "task": "Open the latest issue on the repo and add a comment saying looking into it", "domain": "github.com"}}
+- {{"action": "task", "task": "Log in to github.com with username X and password Y, then star the repo Z", "domain": "github.com"}}
+- {{"action": "task", "task": "Enter the 2FA code 324617 in the current authentication form and submit it", "domain": "github.com"}}  (after the user provides the code)
 - {{"action": "list_sessions"}}
 - {{"action": "close_session", "domain": "github.com"}}'),
 
