@@ -95,11 +95,21 @@ async def run_task(req: TaskRequest):
         elapsed = round(time.time() - t0, 1)
         is_done = history.is_done() if hasattr(history, "is_done") else None
         n_steps = len(history.history) if hasattr(history, "history") else None
-        final = str(history.final_result()) if hasattr(history, "final_result") else None
-        status = "completed" if is_done else "incomplete"
+        raw_final = history.final_result() if hasattr(history, "final_result") else None
+        final = str(raw_final) if raw_final is not None else None
+        has_errors = history.has_errors() if hasattr(history, "has_errors") else False
+        # Surface model-level failures (e.g. all LLM calls 401'd) as `failed`
+        # instead of silently reporting `incomplete` with result=None.
+        if not is_done and has_errors:
+            status = "failed"
+            error_msg = "Agent stopped due to repeated LLM errors — check bridge logs (auth, rate limit, model name)"
+        else:
+            status = "completed" if is_done else "incomplete"
+            error_msg = None
         return TaskResponse(
             status=status, result=final, elapsed_s=elapsed, n_steps=n_steps,
             session_persisted=(domain is not None), domain=domain,
+            error=error_msg,
         )
     except asyncio.TimeoutError:
         return TaskResponse(
