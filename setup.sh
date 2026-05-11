@@ -1406,7 +1406,7 @@ with open(f, 'w') as fh:
     json.dump(wf, fh, indent=2, ensure_ascii=False)
 " "$out" "${TELEGRAM_CRED_ID:-}" "${POSTGRES_CRED_ID:-}" "${ANTHROPIC_CRED_ID:-}" "${OPENAI_CRED_ID:-}" "${HEADERAUTH_CRED_ID:-}" "${EXISTING_SLACK_ID:-}" "${LLM_CRED_ID:-}" "${LLM_CRED_TYPE:-}"
 done
-IMPORT_ORDER="error-notification mcp-client reminder-factory reminder-runner mcp-weather-example workflow-builder mcp-builder mcp-library-manager agent-library-manager sub-agent-runner credential-form oauth-callback memory-consolidation background-checker heartbeat webhook-adapter n8n-claw-agent"
+IMPORT_ORDER="error-notification mcp-client reminder-factory reminder-runner mcp-weather-example workflow-builder mcp-builder mcp-library-manager agent-library-manager sub-agent-runner browser-use credential-form oauth-callback memory-consolidation background-checker heartbeat webhook-adapter n8n-claw-agent"
 
 # n8n Public API settings whitelist — the PUT endpoint rejects any settings
 # field not in its OpenAPI schema (additionalProperties: false), even though
@@ -1532,6 +1532,7 @@ replacements = {
   'REPLACE_LIBRARY_MANAGER_ID':  '${WF_IDS[mcp-library-manager]}',
   'REPLACE_SUB_AGENT_RUNNER_ID': '${WF_IDS[sub-agent-runner]}',
   'REPLACE_AGENT_LIBRARY_MANAGER_ID': '${WF_IDS[agent-library-manager]}',
+  'REPLACE_BROWSER_USE_ID': '${WF_IDS[browser-use]}',
 }
 for placeholder, real_id in replacements.items():
     raw = raw.replace(placeholder, real_id)
@@ -2634,6 +2635,39 @@ HOW TO REPORT:
 - Mention what failed (workflow + node), when (relative time like "heute Nacht um 03:12"), and the error message
 - If the execution URL is present in the content, offer it as a clickable reference
 - Do NOT invent errors — if memory_search returns nothing for the relevant window, say so plainly'),
+
+  ('browser_use', 'You have access to the "browser_action" tool — a real Chromium browser driven by an AI agent (Browser Use SDK) for actions on websites.
+
+WHEN to use:
+- User wants to perform an action on a website: newsletter signup, contact form, click flow, login, create an entry, place an order
+- User wants to extract data that web_reader cannot reach: JavaScript-rendered content, login-gated pages
+- NOT for simple read-only fetches — use web_reader (Crawl4AI) for those (much faster)
+
+HOW to use:
+- Pass a JSON string in `query` to the tool. Required: `action`.
+- action="task": run a natural-language browser task.
+  - Required: `task` (what to do, in plain language).
+  - Optional: `url` (starting URL), `domain` (e.g. "github.com"), `max_steps` (default 25), `timeout_s` (default 300).
+  - When `domain` is set, the browser session is pooled and reused across calls on the same domain → the agent stays logged in.
+- action="list_sessions": list active pooled browser sessions (which domains the user is currently "logged in" on).
+- action="close_session": close a specific pooled session. Required: `domain`.
+
+PERSISTENT LOGIN PATTERN:
+- First login on a site (e.g. GitHub): user must provide credentials. Use action="task" with `domain="github.com"` and the task description "Log in to github.com with username X and password Y, then …". The session stays alive in the bridge for 30 min after the last task and is reused if you pass the same `domain` again.
+- Subsequent actions: just call action="task" with `domain="github.com"`, the cookies are still there.
+- IMPORTANT: sessions are in-memory only. After a VPS reboot or bridge restart, the user must log in again. Tell the user this if relevant.
+
+SAFETY:
+- For sensitive actions (purchases, posts, irreversible changes, banking) ALWAYS confirm with the user via Telegram first.
+- Typical task takes 30–90 seconds. Tell the user "moment, das dauert ein paar Sekunden" so they know to wait.
+- If 2FA / MFA appears, do not try to solve it — tell the user and ask them to complete it manually next time they log in via their own browser.
+- If a CAPTCHA appears, return the screenshot URL (if available) and tell the user.
+
+EXAMPLES:
+- {"action": "task", "task": "Sign up for the newsletter on https://example.com with email me@example.com"}
+- {"action": "task", "task": "Open the latest issue on the repo and add a comment saying ''looking into it''", "domain": "github.com"}
+- {"action": "list_sessions"}
+- {"action": "close_session", "domain": "github.com"}'),
 
   ('user_context', 'The user is {user}. Context: {ctx}')
 
