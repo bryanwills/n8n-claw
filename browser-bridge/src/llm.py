@@ -101,38 +101,54 @@ async def fetch_active_provider() -> LLMConfig:
     return LLMConfig(provider=provider, model=model, api_key=api_key, endpoint=endpoint)
 
 
+def _strip_chat_completions(endpoint: str | None) -> str | None:
+    """Convert n8n-claw's chat/completions URL to a base_url for the SDK.
+    Setup.sh stores e.g. 'https://api.openai.com/v1/chat/completions'; the
+    OpenAI Python SDK wants 'https://api.openai.com/v1'.
+    """
+    if not endpoint:
+        return None
+    e = endpoint.rstrip("/")
+    for suffix in ("/chat/completions", "/v1/chat/completions"):
+        if e.endswith(suffix):
+            # keep '/v1' if present in the second form
+            if suffix == "/v1/chat/completions":
+                return e[: -len("/chat/completions")]
+            return e[: -len(suffix)]
+    return e
+
+
 def build_llm(cfg: LLMConfig):
-    """Construct a browser_use.llm chat model for the given provider."""
-    p = cfg.provider.lower()
-    if not cfg.api_key and p != "ollama":
+    """Construct a browser_use.llm chat model for the given provider.
+
+    n8n-claw's setup.sh writes provider='openai_compatible' for everything
+    except Anthropic (OpenAI, OpenRouter, DeepSeek, Gemini-via-OpenAI-compat,
+    Mistral, Ollama, custom endpoints). Each carries its own `endpoint` in
+    the config — we route them all through ChatOpenAI with the right base_url.
+    """
+    p = cfg.provider.lower().replace("-", "_")
+    is_ollama_like = p == "ollama" or (cfg.endpoint or "").find(":11434") != -1
+    if not cfg.api_key and not is_ollama_like:
         raise RuntimeError(
             f"No API key available for provider {cfg.provider!r}. "
             f"Set tools_config.llm_provider.api_key in n8n-claw, or pass "
             f"{cfg.provider.upper()}_API_KEY as a container env var."
         )
+
     if p == "anthropic":
         from browser_use.llm import ChatAnthropic
         return ChatAnthropic(model=cfg.model, api_key=cfg.api_key)
-    if p == "openai":
+
+    # All non-Anthropic providers go through ChatOpenAI with the endpoint
+    # n8n-claw chose. This matches what n8n-claw does itself (single
+    # `openAiApi` credential type for all of them).
+    if p in ("openai_compatible", "openai", "openrouter", "deepseek",
+             "gemini", "mistral", "groq", "ollama"):
         from browser_use.llm import ChatOpenAI
-        return ChatOpenAI(model=cfg.model, api_key=cfg.api_key)
-    if p == "openrouter":
-        from browser_use.llm import ChatOpenRouter
-        return ChatOpenRouter(model=cfg.model, api_key=cfg.api_key)
-    if p == "gemini":
-        from browser_use.llm import ChatGoogle
-        return ChatGoogle(model=cfg.model, api_key=cfg.api_key)
-    if p == "ollama":
-        from browser_use.llm import ChatOllama
-        host = cfg.endpoint or os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
-        return ChatOllama(model=cfg.model, host=host)
-    if p == "groq":
-        from browser_use.llm import ChatGroq
-        return ChatGroq(model=cfg.model, api_key=cfg.api_key)
-    if p == "mistral":
-        from browser_use.llm import ChatMistral
-        return ChatMistral(model=cfg.model, api_key=cfg.api_key)
-    if p == "deepseek":
-        from browser_use.llm import ChatDeepSeek
-        return ChatDeepSeek(model=cfg.model, api_key=cfg.api_key)
+        base_url = _strip_chat_completions(cfg.endpoint)
+        kwargs = {"model": cfg.model, "api_key": cfg.api_key or "not-needed"}
+        if base_url and "api.openai.com" not in base_url:
+            kwargs["base_url"] = base_url
+        return ChatOpenAI(**kwargs)
+
     raise ValueError(f"Unsupported LLM provider for browser-bridge: {cfg.provider!r}")
