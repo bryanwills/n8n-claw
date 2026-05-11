@@ -1406,7 +1406,7 @@ with open(f, 'w') as fh:
     json.dump(wf, fh, indent=2, ensure_ascii=False)
 " "$out" "${TELEGRAM_CRED_ID:-}" "${POSTGRES_CRED_ID:-}" "${ANTHROPIC_CRED_ID:-}" "${OPENAI_CRED_ID:-}" "${HEADERAUTH_CRED_ID:-}" "${EXISTING_SLACK_ID:-}" "${LLM_CRED_ID:-}" "${LLM_CRED_TYPE:-}"
 done
-IMPORT_ORDER="error-notification mcp-client reminder-factory reminder-runner mcp-weather-example workflow-builder mcp-builder mcp-library-manager agent-library-manager sub-agent-runner credential-form oauth-callback memory-consolidation background-checker heartbeat webhook-adapter n8n-claw-agent"
+IMPORT_ORDER="error-notification mcp-client reminder-factory reminder-runner mcp-weather-example workflow-builder mcp-builder mcp-library-manager agent-library-manager sub-agent-runner browser-use credential-form oauth-callback memory-consolidation background-checker heartbeat webhook-adapter n8n-claw-agent"
 
 # n8n Public API settings whitelist — the PUT endpoint rejects any settings
 # field not in its OpenAPI schema (additionalProperties: false), even though
@@ -1532,6 +1532,7 @@ replacements = {
   'REPLACE_LIBRARY_MANAGER_ID':  '${WF_IDS[mcp-library-manager]}',
   'REPLACE_SUB_AGENT_RUNNER_ID': '${WF_IDS[sub-agent-runner]}',
   'REPLACE_AGENT_LIBRARY_MANAGER_ID': '${WF_IDS[agent-library-manager]}',
+  'REPLACE_BROWSER_USE_ID': '${WF_IDS[browser-use]}',
 }
 for placeholder, real_id in replacements.items():
     raw = raw.replace(placeholder, real_id)
@@ -1784,7 +1785,7 @@ if [ -n "$REMINDER_RUNNER_ID" ]; then
 fi
 
 # Activate sub-workflows (required since n8n 2.x)
-for SUB_WF in mcp-client mcp-builder mcp-library-manager agent-library-manager sub-agent-runner workflow-builder reminder-factory project-manager background-checker; do
+for SUB_WF in mcp-client mcp-builder mcp-library-manager agent-library-manager sub-agent-runner workflow-builder reminder-factory project-manager background-checker browser-use; do
   SUB_WF_ID=${WF_IDS[$SUB_WF]}
   if [ -n "$SUB_WF_ID" ]; then
     curl -s -X POST "${N8N_BASE}/api/v1/workflows/${SUB_WF_ID}/activate" \
@@ -2634,6 +2635,47 @@ HOW TO REPORT:
 - Mention what failed (workflow + node), when (relative time like "heute Nacht um 03:12"), and the error message
 - If the execution URL is present in the content, offer it as a clickable reference
 - Do NOT invent errors — if memory_search returns nothing for the relevant window, say so plainly'),
+
+  ('browser_use', 'You have access to the browser_action tool — a real Chromium browser driven by an AI agent (Browser Use SDK) for actions on websites.
+
+WHEN to use:
+- User wants to perform an action on a website: newsletter signup, contact form, click flow, login, create an entry, place an order
+- User wants to extract data that web_reader cannot reach: JavaScript-rendered content, login-gated pages
+- NOT for simple read-only fetches — use web_reader (Crawl4AI) for those (much faster)
+
+HOW to use:
+- Pass a JSON string to the tool. The required field is action.
+- action=task: run a natural-language browser task.
+  - Required: task (what to do, in plain language).
+  - Optional: url (starting URL), domain (e.g. ''github.com''), max_steps (default 25), timeout_s (default 300).
+  - When domain is set, the browser session is pooled and reused across calls on the same domain → the agent stays logged in.
+- action=list_sessions: list active pooled browser sessions (which domains the user is currently logged in on).
+- action=close_session: close a specific pooled session. Required: domain.
+
+PERSISTENT LOGIN PATTERN:
+- First login on a site (e.g. GitHub): user must provide credentials. Use action=task with domain set and a task like ''Log in to github.com with username X and password Y, then ...''. The session stays alive in the bridge for 30 min after the last task and is reused if you pass the same domain again.
+- Subsequent actions: just call action=task with the same domain, the cookies are still there.
+- IMPORTANT: sessions are in-memory only. After a VPS reboot or bridge restart, the user must log in again. Tell the user this if relevant.
+
+SAFETY:
+- For sensitive actions (purchases, posts, irreversible changes, banking) ALWAYS confirm with the user via Telegram first.
+- Typical task takes 30–90 seconds. Tell the user ''moment, das dauert ein paar Sekunden'' so they know to wait.
+- If a CAPTCHA appears, return the screenshot URL (if available) and tell the user.
+
+INTERACTIVE 2FA / MFA PATTERN:
+When a 2FA prompt appears during a login task (TOTP, SMS-code, email-magic-link code):
+1. Stop and ask the user for the code in a focused message, e.g. ''GitHub fragt nach einem 6-stelligen 2FA-Code aus deiner Authenticator-App. Bitte schick mir den Code.''
+2. DO NOT navigate away, close the browser, or call close_session. The keep-alive session pool holds the live 2FA page open for the next call.
+3. When the user replies with the code, make a follow-up browser_action call with the SAME domain and a task like ''Enter the 2FA code 324617 in the current authentication form and submit it''.
+4. The follow-up reuses the same live browser session — the code lands on the form that''s already open, login completes, session is now fully authenticated for further tasks on that domain.
+This works for any time-based code (TOTP, SMS, email magic-link). It does NOT work for hardware-key 2FA (WebAuthn / passkeys) since those need a physical USB device the bridge does not have.
+
+EXAMPLES:
+- {{"action": "task", "task": "Sign up for the newsletter on https://example.com with email me@example.com"}}
+- {{"action": "task", "task": "Log in to github.com with username X and password Y, then star the repo Z", "domain": "github.com"}}
+- {{"action": "task", "task": "Enter the 2FA code 324617 in the current authentication form and submit it", "domain": "github.com"}}  (after the user provides the code)
+- {{"action": "list_sessions"}}
+- {{"action": "close_session", "domain": "github.com"}}'),
 
   ('user_context', 'The user is {user}. Context: {ctx}')
 

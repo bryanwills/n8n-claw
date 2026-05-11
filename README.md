@@ -61,6 +61,7 @@ Talk to your agent in natural language — it manages tasks, remembers context a
 - **Scheduled actions** — the agent executes instructions at a set time ("search HN for AI news at 9am")
 - **Web search** — searches the web via built-in SearXNG instance (no API key needed)
 - **Web reader** — reads webpages as clean markdown via Crawl4AI (JS rendering, no boilerplate)
+- **Browser automation** — drives a real Chromium via Browser Use to perform agentic actions on websites: newsletter signups, contact forms, click flows, login-gated content. Sessions are pooled per domain so the agent stays logged in across calls (in-memory, lost on restart). Supports **interactive 2FA**: agent stops at the 2FA prompt, asks you for the code via Telegram, you reply with the TOTP code, agent enters it on the same live page and completes the login.
 - **File passthrough** — stores documents and photos from Telegram so Skills can use the originals (upload to Lexware, save to Nextcloud, etc.). Can also download files from the internet or cloud services and send them back to the chat.
 - **Project memory** — persistent markdown documents for tracking ongoing work across conversations
 - **OpenClaw integration** — delegate coding tasks to an autonomous AI agent that can build websites, apps, and run shell commands

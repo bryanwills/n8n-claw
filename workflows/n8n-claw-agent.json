@@ -597,6 +597,17 @@
         ]
       ]
     },
+    "Browser Action": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Telegram Status": {
       "ai_tool": [
         [
@@ -1577,6 +1588,33 @@
       "typeVersion": 2.2,
       "position": [
         3728,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "name": "browser_action",
+        "description": "Drive a real browser to perform actions on websites: sign up for newsletters, fill out forms, click buttons, log in, navigate UIs, extract content from JS-rendered or login-gated pages. NOT for simple read-only fetches — use web_reader for that instead. Input is a JSON string in `query`. Actions:\\n- action='task': run a natural-language browser task. Required: task (description). Optional: url (starting URL), domain (e.g. 'github.com' — if set, the browser session is pooled and reused on the same domain so the agent stays logged in across calls), max_steps (default 25), timeout_s (default 300).\\n- action='list_sessions': list all active pooled browser sessions (logged-in domains).\\n- action='close_session': close a specific pooled session. Required: domain.\\nSessions live in-memory for up to 30 minutes idle, max 5 concurrent; they are lost when the bridge container restarts. For sensitive actions (purchases, posts, irreversible changes) ALWAYS confirm with the user first. Typical task takes 30–90 seconds.",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_BROWSER_USE_ID",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-browser-use",
+      "name": "Browser Action",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        3856,
         208
       ]
     },
