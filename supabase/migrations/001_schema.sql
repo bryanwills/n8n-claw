@@ -121,10 +121,13 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: agents; Type: TABLE; Schema: public; Owner: postgres
+-- Name: claw_agents; Type: TABLE; Schema: public; Owner: postgres
+--
+-- Renamed from `agents` (Issue #35): n8n >= 2.21.4 ships a core
+-- "Agents" feature that creates its own public.agents table.
 --
 
-CREATE TABLE public.agents (
+CREATE TABLE public.claw_agents (
     id integer NOT NULL,
     key text NOT NULL,
     content text NOT NULL,
@@ -132,13 +135,13 @@ CREATE TABLE public.agents (
 );
 
 
-ALTER TABLE public.agents OWNER TO postgres;
+ALTER TABLE public.claw_agents OWNER TO postgres;
 
 --
--- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: claw_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.agents_id_seq
+CREATE SEQUENCE public.claw_agents_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -147,13 +150,13 @@ CREATE SEQUENCE public.agents_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.agents_id_seq OWNER TO postgres;
+ALTER TABLE public.claw_agents_id_seq OWNER TO postgres;
 
 --
--- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: claw_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
+ALTER SEQUENCE public.claw_agents_id_seq OWNED BY public.claw_agents.id;
 
 
 --
@@ -548,10 +551,10 @@ ALTER SEQUENCE public.reminders_id_seq OWNED BY public.reminders.id;
 
 
 --
--- Name: agents id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: claw_agents id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agents_id_seq'::regclass);
+ALTER TABLE ONLY public.claw_agents ALTER COLUMN id SET DEFAULT nextval('public.claw_agents_id_seq'::regclass);
 
 
 --
@@ -625,19 +628,19 @@ ALTER TABLE ONLY public.reminders ALTER COLUMN id SET DEFAULT nextval('public.re
 
 
 --
--- Name: agents agents_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: claw_agents claw_agents_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.agents
-    ADD CONSTRAINT agents_key_key UNIQUE (key);
+ALTER TABLE ONLY public.claw_agents
+    ADD CONSTRAINT claw_agents_key_key UNIQUE (key);
 
 
 --
--- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: claw_agents claw_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.agents
-    ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.claw_agents
+    ADD CONSTRAINT claw_agents_pkey PRIMARY KEY (id);
 
 
 --
@@ -903,12 +906,12 @@ GRANT ALL ON FUNCTION public.search_memory_keyword(search_query text, match_coun
 
 
 --
--- Name: TABLE agents; Type: ACL; Schema: public; Owner: postgres
+-- Name: TABLE claw_agents; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT ALL ON TABLE public.agents TO anon;
-GRANT ALL ON TABLE public.agents TO authenticated;
-GRANT ALL ON TABLE public.agents TO service_role;
+GRANT ALL ON TABLE public.claw_agents TO anon;
+GRANT ALL ON TABLE public.claw_agents TO authenticated;
+GRANT ALL ON TABLE public.claw_agents TO service_role;
 
 
 --
@@ -921,12 +924,12 @@ GRANT ALL ON TABLE public.file_refs TO service_role;
 
 
 --
--- Name: SEQUENCE agents_id_seq; Type: ACL; Schema: public; Owner: postgres
+-- Name: SEQUENCE claw_agents_id_seq; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT ALL ON SEQUENCE public.agents_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.agents_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.agents_id_seq TO service_role;
+GRANT ALL ON SEQUENCE public.claw_agents_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.claw_agents_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.claw_agents_id_seq TO service_role;
 
 
 --

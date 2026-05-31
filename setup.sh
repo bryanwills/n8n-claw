@@ -680,6 +680,20 @@ if [ -n "$FITNESS_ERRORS" ]; then
 fi
 echo "  ✅ Fitness Buddy schema applied"
 
+# Rename app table agents -> claw_agents (Issue #35: avoids collision with
+# n8n >= 2.21.4 core Agents feature). Idempotent: only renames n8n-claw's
+# table (identified by its `key` column) and only if not already renamed.
+# Must run before n8n migrates so it can create its own public.agents.
+echo "  Applying agents->claw_agents rename migration..."
+RENAME_OUTPUT=$(LANG=C LC_ALL=C PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -d postgres \
+  -f supabase/migrations/009_agents_rename.sql 2>&1)
+RENAME_ERRORS=$(echo "$RENAME_OUTPUT" | grep -i "error" | head -5)
+if [ -n "$RENAME_ERRORS" ]; then
+  echo -e "  ${YELLOW}⚠️  Rename migration warnings:${NC}"
+  echo "$RENAME_ERRORS" | while read line; do echo "    $line"; done
+fi
+echo "  ✅ agents->claw_agents rename applied"
+
 # Reload PostgREST schema cache so new tables are immediately available via API
 docker kill --signal=SIGUSR1 $(docker ps -q --filter name=rest) 2>/dev/null || true
 
@@ -2296,7 +2310,7 @@ user = '${USER_DISPLAY}'.replace("'", "''")
 ctx = '${CTX}'.replace("'", "''")
 
 sql = f"""
-INSERT INTO public.agents (key, content) VALUES
+INSERT INTO public.claw_agents (key, content) VALUES
   ('mcp_instructions', 'You have MCP Skills — installable capabilities powered by the Model Context Protocol (MCP):
 
 ## MCP Client (mcp_client tool)
@@ -2760,7 +2774,7 @@ pw = os.environ.get('POSTGRES_PASSWORD', '')
 env = {**os.environ, 'PGPASSWORD': pw, 'LANG': 'C', 'LC_ALL': 'C'}
 
 sql = """
-INSERT INTO public.agents (key, content) VALUES
+INSERT INTO public.claw_agents (key, content) VALUES
   ('persona:research-expert', '# Research Expert
 
 ## Expertise

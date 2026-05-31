@@ -568,7 +568,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "{{SUPABASE_URL}}/rest/v1/agents?key=eq.mcp_instructions",
+        "url": "{{SUPABASE_URL}}/rest/v1/claw_agents?key=eq.mcp_instructions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

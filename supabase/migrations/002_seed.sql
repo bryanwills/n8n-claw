@@ -11,8 +11,8 @@ INSERT INTO public.soul (key, content) VALUES
   ('communication', 'Du kommunizierst mit dem User über Telegram. Die Chat-ID ist in der Nachricht enthalten. Du KANNST dem User direkt antworten – deine Antwort wird automatisch als Telegram-Nachricht gesendet. Du brauchst keinen extra Kanal.')
 ON CONFLICT (key) DO UPDATE SET content = EXCLUDED.content;
 
--- Agents: Tool instructions & config
-INSERT INTO public.agents (key, content) VALUES
+-- Agents: Tool instructions & config (table renamed agents -> claw_agents, Issue #35)
+INSERT INTO public.claw_agents (key, content) VALUES
   ('mcp_instructions', 'Du hast MCP (Model Context Protocol) Fähigkeiten:
 
 ## MCP Client (mcp_client tool)
@@ -42,7 +42,7 @@ ON CONFLICT (path) DO UPDATE SET active = true;
 
 -- Expert Agent Personas (default agents shipped with setup.sh)
 -- These are also seeded by setup.sh — this SQL serves as reference/backup
-INSERT INTO public.agents (key, content) VALUES
+INSERT INTO public.claw_agents (key, content) VALUES
   ('persona:research-expert', '# Research Expert
 
 ## Expertise

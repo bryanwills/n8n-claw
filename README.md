@@ -1333,6 +1333,15 @@ docker compose up -d
 
 </summary>
 
+**n8n won't start after `docker compose pull` (logs show `column "projectId" does not exist` / `CreateAgentTables1783000000000`)?**
+→ n8n 2.21.4 and newer ship a built-in *Agents* feature that creates its own `agents` table. Older n8n-claw installs already had an app table named `agents` in the same database, so n8n's migration collides and the instance crash-loops on boot. Your data is safe (the failed migration rolls back cleanly). The fix renames the app table to `claw_agents`, freeing the name for n8n:
+
+```bash
+cd n8n-claw && git pull && ./setup.sh --force
+```
+
+This applies migration `009_agents_rename.sql` (renames the table, keeping all your personas and tool config), lets n8n boot, and re-imports the workflows so they point at `claw_agents`. No version pin needed: you can stay on current n8n.
+
 **Agent not responding to Telegram messages?**
 → Check all workflows are **activated** in n8n UI
 

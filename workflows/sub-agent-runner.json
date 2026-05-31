@@ -155,7 +155,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT content FROM agents WHERE key = 'persona:' || '{{ $json.agent }}' LIMIT 1",
+        "query": "SELECT content FROM claw_agents WHERE key = 'persona:' || '{{ $json.agent }}' LIMIT 1",
         "options": {
           "queryBatching": "independently"
         }
