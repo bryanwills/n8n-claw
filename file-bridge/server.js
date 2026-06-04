@@ -1,17 +1,21 @@
 const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
-
-const app = express();
-app.use(express.json({ limit: '25mb' }));
 
 const PORT = process.env.PORT || 3200;
 const FILES_DIR = process.env.FILES_DIR || '/data/files';
 const META_DIR = process.env.META_DIR || '/data/meta';
 const TTL_HOURS = parseInt(process.env.UPLOAD_TTL_HOURS || '24', 10);
-const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10) * 1024 * 1024;
+const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '200', 10) * 1024 * 1024;
+// Express body limit must hold the base64 payload (~1.34x original) plus JSON wrapper.
+// Derived from MAX_FILE_SIZE_MB with headroom; override with MAX_BODY_SIZE_MB if needed.
+const MAX_BODY_MB = parseInt(process.env.MAX_BODY_SIZE_MB || String(Math.ceil((MAX_SIZE / 1024 / 1024) * 1.4) + 16), 10);
+
+const app = express();
+app.use(express.json({ limit: MAX_BODY_MB + 'mb' }));
 
 // Ensure directories exist
 [FILES_DIR, META_DIR].forEach(dir => {
@@ -79,26 +83,37 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
 // ── POST /upload/base64 — JSON with base64 content ────────────
 app.post('/upload/base64', (req, res) => {
-  const { content_base64, file_name, mime_type } = req.body;
+  const { content_base64, file_name, mime_type, compress } = req.body;
   if (!content_base64) {
     return res.status(400).json({ error: 'content_base64 is required.' });
   }
 
-  const buffer = Buffer.from(content_base64, 'base64');
-  if (buffer.length > MAX_SIZE) {
+  const original = Buffer.from(content_base64, 'base64');
+  if (original.length > MAX_SIZE) {
     return res.status(413).json({ error: `File too large. Max ${MAX_SIZE / 1024 / 1024} MB.` });
+  }
+
+  // Optional gzip-at-rest. Transparent: downloads and forwards are decompressed on the fly,
+  // so callers always receive the original bytes. Keeps large JSON backups small on disk.
+  let stored = original;
+  let encoding = null;
+  if (compress) {
+    stored = zlib.gzipSync(original);
+    encoding = 'gzip';
   }
 
   const id = generateId();
   const expiresAt = new Date(Date.now() + TTL_HOURS * 3600 * 1000).toISOString();
 
-  fs.writeFileSync(filePath(id), buffer);
+  fs.writeFileSync(filePath(id), stored);
 
   const meta = {
     id,
     file_name: file_name || 'upload',
     mime_type: mime_type || 'application/octet-stream',
-    size_bytes: buffer.length,
+    size_bytes: original.length,
+    stored_bytes: stored.length,
+    encoding,
     created_at: new Date().toISOString(),
     expires_at: expiresAt
   };
@@ -123,6 +138,14 @@ app.get('/files/:id', (req, res) => {
 
   res.set('Content-Type', meta.mime_type);
   res.set('Content-Disposition', `attachment; filename="${meta.file_name}"`);
+
+  // Stored gzipped (e.g. config backups): decompress on the fly so callers get the original bytes.
+  if (meta.encoding === 'gzip') {
+    const buf = zlib.gunzipSync(fs.readFileSync(fp));
+    res.set('Content-Length', buf.length);
+    return res.end(buf);
+  }
+
   res.set('Content-Length', meta.size_bytes);
   fs.createReadStream(fp).pipe(res);
 });
@@ -189,7 +212,8 @@ app.post('/files/:id/forward', async (req, res) => {
   const { url, headers, form_fields, filename, file_field, method, raw_body } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required.' });
 
-  const fileBuffer = fs.readFileSync(fp);
+  const storedBuffer = fs.readFileSync(fp);
+  const fileBuffer = meta.encoding === 'gzip' ? zlib.gunzipSync(storedBuffer) : storedBuffer;
   const uploadName = filename || meta.file_name;
   const httpMethod = (method || 'POST').toUpperCase();
 
@@ -286,7 +310,8 @@ app.get('/health', (req, res) => {
     status: 'ok',
     files_stored: metaFiles.length,
     ttl_hours: TTL_HOURS,
-    max_size_mb: MAX_SIZE / 1024 / 1024
+    max_size_mb: MAX_SIZE / 1024 / 1024,
+    max_body_mb: MAX_BODY_MB
   });
 });
 
@@ -312,5 +337,5 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 app.listen(PORT, () => {
-  console.log(`File Bridge running on port ${PORT} (TTL: ${TTL_HOURS}h, max: ${MAX_SIZE / 1024 / 1024}MB)`);
+  console.log(`File Bridge running on port ${PORT} (TTL: ${TTL_HOURS}h, max file: ${MAX_SIZE / 1024 / 1024}MB, max body: ${MAX_BODY_MB}MB)`);
 });

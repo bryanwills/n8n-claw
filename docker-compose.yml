@@ -157,7 +157,7 @@ services:
       - file_bridge_data:/data
     environment:
       - UPLOAD_TTL_HOURS=24
-      - MAX_FILE_SIZE_MB=20
+      - MAX_FILE_SIZE_MB=200
     networks:
       - n8n-claw-net
 
