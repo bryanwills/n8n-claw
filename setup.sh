@@ -1251,6 +1251,7 @@ for f in workflows/*.json workflows/adapters/*.json; do
     -e "s|{{TELEGRAM_CHAT_ID}}|${TELEGRAM_CHAT_ID}|g" \
     -e "s|{{CREDENTIAL_FORM_WEBHOOK_ID}}|${CREDENTIAL_FORM_WEBHOOK_ID}|g" \
     -e "s|{{WEBHOOK_SECRET}}|${WEBHOOK_SECRET}|g" \
+    -e "s|{{CRAWL4AI_API_TOKEN}}|${CRAWL4AI_API_TOKEN}|g" \
     -e "s|{{PAPERCLIP_INTERNAL_URL}}|${PAPERCLIP_INTERNAL_URL}|g" \
     -e "s|{{PAPERCLIP_AGENT_KEY}}|${PAPERCLIP_AGENT_KEY}|g" \
     -e "s|{{TELEGRAM_BOT_TOKEN}}|${TELEGRAM_BOT_TOKEN}|g" \
