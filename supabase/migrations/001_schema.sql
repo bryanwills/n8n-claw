@@ -1329,3 +1329,13 @@ GRANT USAGE ON SCHEMA public TO anon, service_role;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON SEQUENCE public.template_credentials_id_seq TO anon, authenticated, service_role;
+
+-- ============================================================
+-- Memory governance: scope + ownership (multi-user instances).
+-- 'team' entries are shared knowledge; 'personal' entries are only
+-- surfaced to their owner. NOTE: schema-qualified names are mandatory
+-- here (pg_dump clears search_path at the top of this file).
+-- ============================================================
+ALTER TABLE public.memory_long ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT 'team';
+ALTER TABLE public.memory_long ADD COLUMN IF NOT EXISTS owner_user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_memory_long_scope_owner ON public.memory_long(scope, owner_user_id);
